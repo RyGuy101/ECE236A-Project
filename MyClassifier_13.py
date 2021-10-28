@@ -15,12 +15,53 @@
 #    minimize the sum of all [max{0, 1 - s_i((a^T)x_i + b)} + lambda*|a|^2]
 #    Question: What is lambda? Looks like it could be a hyperparameter we choose.
 
+#######
+# this may be useful for svm implementation:  https://www.cvxpy.org/examples/machine_learning/svm.html
+#######
+
+### imports
 import numpy as np
+import cvxpy as cp
+import matplotlib.pyplot as plt
+
+### helper functions:
+
+### MyClassifier Class
 class MyClassifier:
-    def __init__(self, n):
-        self.training_data = []
-        self.a = np.zeros(n)
-        self.b = np.zeros(n)
+    """Main Class for the Project
+    
+    Attributes:
+        X_train: the training data vectors
+        Y_train: the training data labels
+        X_test: the testing data vectors
+        Y_test: the testting data labels
+        
+        n: how many dimensions our data input is
+            e.g. the MNIST would have 784 as n, as it is a 28x28 image
+        m: how many training samples we have
+        a: the weight vector [n x 1]
+        b: the bias vector [1]
+        lambda: a hyperparameter (TODO: tune this)
+    
+    """
+    def __init__(self, data):
+        """initializes the data
+        arg:
+            data: a list consisting of [X_train, y_train, X_test, y_test]
+        """
+        np.random.seed(1) # for reproducibility
+        
+        self.X_train = data[0]
+        self.y_train = data[1]
+        self.X_test = data[2]
+        self.y_test = data[3]
+                      
+        # initializing weights
+        self.n = self.X_train.shape[1]
+        self.m = self.X_train.shape[0]
+        self.a = np.zeros(self.n)
+        self.b = np.zeros(1)
+        self.lambda = 1e-1
 
     def sample_selection(self, training_sample):
         if True: # TODO
@@ -36,3 +77,4 @@ class MyClassifier:
 
     def test(self, test_data):
         pass
+
