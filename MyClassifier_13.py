@@ -3,7 +3,7 @@
 # Notation (from lecture 3): 
 #     Training data has samples i = 1,...,m
 #     x_i is data point (length n vector), s_i is label (+1 or -1)
-#     a (length n vector) is weights, b (length n vector) is biases
+#     a (length n vector) is weights, b (scalar) is bias
 #     t_i are slack variables
 #
 # We solve the LP:
