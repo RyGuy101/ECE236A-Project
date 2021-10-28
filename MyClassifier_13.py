@@ -60,7 +60,7 @@ class MyClassifier:
         self.n = self.X_train.shape[1]
         self.m = self.X_train.shape[0]
         self.a = np.zeros(self.n)
-        self.b = np.zeros(1)
+        self.b = 0
         self.lambda = 1e-1
 
     def sample_selection(self, training_sample):
