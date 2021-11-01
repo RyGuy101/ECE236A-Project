@@ -107,5 +107,17 @@ class MyClassifier:
             return -1
 
     def test(self, test_data):
-        pass
+        '''
+
+        Args:
+            test_data: m_test x n_test size matrix where
+                       m_test: number of features
+                       n_test: number of test data
+
+        Returns:
+            vector that contains the classification decisions
+
+        '''
+        return np.apply_along_axis(self.f, 0, test_data)
+
 
