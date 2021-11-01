@@ -31,6 +31,7 @@ class MyClassifier:
     """Main Class for the Project
     
     Attributes:
+
         X_train: the training data vectors
         Y_train: the training data labels
         X_test: the testing data vectors
@@ -70,10 +71,40 @@ class MyClassifier:
         return self
 
     def train(self, train_data, train_label):
+        '''
+
+        Args:
+            train_data: N_train x M
+                        M: number of features in data vectors (784) for MNIST
+                        N_train: number of points used for training
+                        Each row of train_data corresponds to a data point
+            train_label: vector of length N_train
+
+        Returns:
+            MyClassifier object
+
+        '''
+
+
+
         return self
 
     def f(self, input):
-        pass
+        '''
+
+        Args:
+            input: vector of length L
+                   corresponds to the function g(y)
+
+        Returns:
+            estimated class
+
+        '''
+
+        if np.dot(self.a, input) + self.b > 0:
+            return 1
+        elif np.dot(self.a, input) + self.b <= 1:
+            return -1
 
     def test(self, test_data):
         pass
