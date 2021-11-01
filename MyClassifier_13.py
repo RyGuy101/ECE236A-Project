@@ -58,7 +58,7 @@ class MyClassifier:
         self.y_test = data[3]
                       
         # initializing weights
-        self.n = self.X_train.shape[1]
+        self.n = self.X_train.shape[1] #I think m and n should be reversed...? I wrote the train function assuming they are reversed
         self.m = self.X_train.shape[0]
         self.a = np.zeros(self.n)
         self.b = 0
@@ -84,7 +84,19 @@ class MyClassifier:
             MyClassifier object
 
         '''
+        # https://www.cvxpy.org/examples/basic/linear_program.html
+        x = train_data
+        s = train_label
+        t = cp.variable(self.m)
+        prob = cp.Problem(cp.Minimize(np.ones(self.m)@t)),
+                          [np.zeros(self.m) < t ,
+                           np.ones(self.m) - s*(x.T@self.a) + self.b*np.ones(self.m) < t])
+        prob.solve()
+        print("\nThe optimal value is", prob.value)
+        print("A solution t is")
+        print(t.value)
 
+        #How to get a, b values from t?
 
 
         return self
