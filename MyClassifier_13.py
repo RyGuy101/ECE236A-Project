@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Notation (from lecture 3): 
+# Notation from lecture 3: 
 #     Training data has samples i = 1,...,m
 #     x_i is data point (length n vector), s_i is label (+1 or -1)
 #     a (length n vector) is weights, b (scalar) is bias
@@ -14,6 +14,13 @@
 # Or with SVM:
 #    minimize the sum of all [max{0, 1 - s_i((a^T)x_i + b)} + lambda*|a|^2]
 #    Question: What is lambda? Looks like it could be a hyperparameter we choose.
+
+# Notation in Project Description:
+#     Training data has samples i = 1,...,N
+#     y_i is data point (length M vector), s_i is label (+1 or -1)
+#     W (M by L matrix) is weights, w (length L vector) is bias (L is chosen by us)
+#     g(y) = (W^T)y + w
+#     f(x) = f(g(y)) decides classification label
 
 #######
 # this may be useful for svm implementation:  https://www.cvxpy.org/examples/machine_learning/svm.html
