@@ -57,27 +57,26 @@ class MyClassifier:
         lambda: a hyperparameter (TODO: tune this)
     
     """
-    def __init__(self, data):
+    def __init__(self, M):
         """initializes the data
         arg:
-            data: a list consisting of [y_train, s_train, y_test, s_test]
+            M: number of features
         """
-        np.random.seed(1) # for reproducibility
-        
-        self.y_train = data[0]
-        self.s_train = data[1]
-        self.y_test = data[2]
-        self.s_test = data[3]
                       
         # initializing weights
-        self.M = self.y_train.shape[1]
+        self.M = M
         self.W = np.zeros(self.M)
         self.w = 0
         # self.lambda = 1e-1
 
+        # initialize empty training set
+        self.y_train = np.zeros((0, self.M))
+        self.s_train = np.zeros(0, dtype=np.int8)
+
     def sample_selection(self, training_sample):
         if True: # TODO
-            self.training_data.append(training_sample)
+            self.y_train = np.append(self.y_train, training_sample)
+            self.s_train = np.append(self.s_train, self.current_training_label) # set as a class member since it is not a function input
         
         return self
 
@@ -99,21 +98,21 @@ class MyClassifier:
         N_train = train_data.shape[0]
         Y = train_data
         S = train_label
-        W = cp.variable(self.M) # Assumes L = 1
-        w = cp.variable(1)
-        t = cp.variable(N_train)
+        W = cp.Variable(self.M) # Assumes L = 1
+        w = cp.Variable(1)
+        t = cp.Variable(N_train)
         prob = cp.Problem(cp.Minimize(np.ones(N_train)@t), [
             np.zeros(N_train) <= t, # 0 <= t_i, i=1,..,N
             np.ones(N_train) - S*(Y@W + w*np.ones(N_train)) <= t # 1 - s_i*((W^T)y_i + w) <= t_i
         ])
-        prob.solve()
+        prob.solve() # solver='OSQP', verbose=True
         print("\nThe optimal value is", prob.value)
-        print("A solution W, w is")
-        print("W = {}".format(W))
-        print("w = {}".format(w))
+        # print("A solution W, w is")
+        # print("W = {}".format(W.value))
+        # print("w = {}".format(w.value))
 
-        self.W = W
-        self.w = w
+        self.W = W.value
+        self.w = w.value
         return self
 
     def f(self, input):
@@ -128,8 +127,8 @@ class MyClassifier:
 
         '''
 
-        if abs(input) < 1:
-            print("Unsure about classification. Value is {}".format(input))
+        # if abs(input) < 1:
+        #     print("Unsure about classification. Value is {}".format(input))
 
         # decision function in Project Description
         if input > 0:
@@ -150,4 +149,4 @@ class MyClassifier:
 
         '''
         N_test = test_data.shape[0]
-        return np.apply_along_axis(self.f, 0, test_data@self.W + self.w*np.ones(N_test))
+        return np.vectorize(self.f)(test_data@self.W + self.w*np.ones(N_test))
