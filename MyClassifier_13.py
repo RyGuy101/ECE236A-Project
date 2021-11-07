@@ -103,9 +103,10 @@ class MyClassifier:
         t = cp.Variable(N_train)
         prob = cp.Problem(cp.Minimize(np.ones(N_train)@t), [
             np.zeros(N_train) <= t, # 0 <= t_i, i=1,..,N
-            np.ones(N_train) - S*(Y@W + w*np.ones(N_train)) <= t # 1 - s_i*((W^T)y_i + w) <= t_i
+            1 - (Y[S == 1]@W + w) <= t[S == 1], # 1 - s_i*((W^T)y_i + w) <= t_i
+            1 + (Y[S == -1]@W + w) <= t[S == -1]
         ])
-        prob.solve() # solver='OSQP', verbose=True
+        prob.solve()
         print("\nThe optimal value is", prob.value)
         # print("A solution W, w is")
         # print("W = {}".format(W.value))
