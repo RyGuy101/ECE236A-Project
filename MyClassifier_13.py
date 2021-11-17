@@ -73,14 +73,17 @@ class MyClassifier:
         self.y_train = np.zeros((0, self.M))
         self.s_train = np.zeros(0, dtype=np.int8)
 
-    def sample_selection(self, training_sample):
-        if True: # TODO
-            self.y_train = np.append(self.y_train, training_sample)
-            self.s_train = np.append(self.s_train, self.current_training_label) # set as a class member since it is not a function input
+    def sample_selection(self, training_sample, training_label): # TODO: Is it ok to have training_label as an input to the function? (see project description)
+        g_y = training_sample@self.W + self.w
+        f_g_y = self.f(g_y)
+        
+        if g_y == 0 or f_g_y != training_label: # TODO. Current example: g(y) == 0 or classification is wrong
+            self.y_train = np.append(self.y_train, [training_sample], axis=0)
+            self.s_train = np.append(self.s_train, [training_label], axis=0)
         
         return self
 
-    def train(self, train_data, train_label):
+    def train(self, train_data=None, train_label=None):
         '''
 
         Args:
@@ -94,10 +97,19 @@ class MyClassifier:
             MyClassifier object
 
         '''
+        if train_data is None:
+            train_data = self.y_train
+        if train_label is None:
+            train_label = self.s_train
+
         # https://www.cvxpy.org/examples/basic/linear_program.html
         N_train = train_data.shape[0]
         Y = train_data
         S = train_label
+
+        if not np.any(S == 1) or not np.any(S == -1):
+            return # Do nothing. Need both classes to train effectively
+
         W = cp.Variable(self.M) # Assumes L = 1
         w = cp.Variable(1)
         t = cp.Variable(N_train)
@@ -107,7 +119,7 @@ class MyClassifier:
             1 + (Y[S == -1]@W + w) <= t[S == -1]
         ])
         prob.solve()
-        print("\nThe optimal value is", prob.value)
+        # print("\nThe optimal value is", prob.value)
         # print("A solution W, w is")
         # print("W = {}".format(W.value))
         # print("w = {}".format(w.value))
