@@ -73,14 +73,14 @@ class MyClassifier:
         self.y_train = np.zeros((0, self.M))
         self.s_train = np.zeros(0, dtype=np.int8)
 
-    def sample_selection(self, training_sample, training_label): # TODO: Is it ok to have training_label as an input to the function? (see project description)
+    def sample_selection(self, training_sample, training_label): # TODO: Is it ok to have training_label as an input to the function? (see project description) -> yes, from Campuswire
         g_y = training_sample@self.W + self.w
         f_g_y = self.f(g_y)
-        
+                    
         if g_y == 0 or f_g_y != training_label: # TODO. Current example: g(y) == 0 or classification is wrong
             self.y_train = np.append(self.y_train, [training_sample], axis=0)
             self.s_train = np.append(self.s_train, [training_label], axis=0)
-        
+          
         return self
 
     def train(self, train_data=None, train_label=None):
@@ -163,3 +163,4 @@ class MyClassifier:
         '''
         N_test = test_data.shape[0]
         return np.vectorize(self.f)(test_data@self.W + self.w*np.ones(N_test))
+
