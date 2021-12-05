@@ -72,15 +72,32 @@ class MyClassifier:
         # initialize empty training set
         self.y_train = np.zeros((0, self.M))
         self.s_train = np.zeros(0, dtype=np.int8)
+        self.linearly_separable = True # assume linearly separable data to start
 
-    def sample_selection(self, training_sample, training_label): # TODO: Is it ok to have training_label as an input to the function? (see project description) -> yes, from Campuswire
+    def sample_selection(self, training_sample, training_label): # training_label added as an input, as mentioned on Campuswire
+        '''
+
+        Args:
+            training_sample: vector of length M
+                        M: number of features in data vectors (784) for MNIST
+            training_label: class label (1 or -1)
+
+        Returns:
+            MyClassifier object
+
+        '''
         g_y = training_sample@self.W + self.w
-        f_g_y = self.f(g_y)
-                    
-        if g_y == 0 or f_g_y != training_label: # TODO. Current example: g(y) == 0 or classification is wrong
+        penalty = 1 - (training_label * g_y)
+
+        # penalty <= 0     -> classified perfectly correctly
+        # 0 < penalty < 1  -> classified correctly but within margin
+        # penalty >= 1     -> classified incorrectly
+
+        # Selects points that are classified incorrectly
+        if penalty >= 1:
             self.y_train = np.append(self.y_train, [training_sample], axis=0)
             self.s_train = np.append(self.s_train, [training_label], axis=0)
-          
+
         return self
 
     def train(self, train_data=None, train_label=None):
@@ -112,13 +129,32 @@ class MyClassifier:
 
         W = cp.Variable(self.M) # Assumes L = 1
         w = cp.Variable(1)
-        t = cp.Variable(N_train)
-        prob = cp.Problem(cp.Minimize(np.ones(N_train)@t), [
-            np.zeros(N_train) <= t, # 0 <= t_i, i=1,..,N
-            1 - (Y[S == 1]@W + w) <= t[S == 1], # 1 - s_i*((W^T)y_i + w) <= t_i
-            1 + (Y[S == -1]@W + w) <= t[S == -1]
-        ])
-        prob.solve()
+
+        if self.linearly_separable:
+            s = cp.Variable(self.M)
+            r = cp.Variable(1)
+            prob = cp.Problem(cp.Minimize((1+1/np.sqrt(self.M))*np.ones(self.M)@s + (1+np.sqrt(self.M))*r), [ # approximation of euclidean norm
+                W <= s,
+                W >= -s,
+                W <= r,
+                W >= -r,
+                1 - (Y[S == 1]@W + w) <= 0,
+                1 + (Y[S == -1]@W + w) <= 0
+            ])
+            prob.solve()
+            if prob.status == "infeasible":
+                self.linearly_separable = False
+                print("Data is not linearly separable")
+        
+        if not self.linearly_separable:
+            t = cp.Variable(N_train)
+            prob = cp.Problem(cp.Minimize(np.ones(N_train)@t), [
+                np.zeros(N_train) <= t, # 0 <= t_i, i=1,..,N
+                1 - (Y[S == 1]@W + w) <= t[S == 1], # 1 - s_i*((W^T)y_i + w) <= t_i
+                1 + (Y[S == -1]@W + w) <= t[S == -1]
+            ])
+            prob.solve()
+        
         # print("\nThe optimal value is", prob.value)
         # print("A solution W, w is")
         # print("W = {}".format(W.value))
