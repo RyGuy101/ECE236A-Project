@@ -93,8 +93,8 @@ class MyClassifier:
         # 0 < penalty < 1  -> classified correctly but within margin
         # penalty >= 1     -> classified incorrectly
 
-        # Selects points that are classified incorrectly
-        if penalty >= 1:
+        # Select points that are classified incorrectly, or classified correctly and some distance within the margin (need to include some correct classifications to balance out noisy data (e.g. synthetic dataset))
+        if penalty >= 0.3125:
             self.y_train = np.append(self.y_train, [training_sample], axis=0)
             self.s_train = np.append(self.s_train, [training_label], axis=0)
 
@@ -182,8 +182,10 @@ class MyClassifier:
         # decision function in Project Description
         if input > 0:
             return 1
-        elif input <= 0:
+        elif input < 0:
             return -1
+        else:
+            return np.random.choice([1, -1])
 
     def test(self, test_data):
         '''
