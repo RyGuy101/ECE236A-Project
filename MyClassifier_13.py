@@ -54,7 +54,6 @@ class MyClassifier:
         N: how many training samples we have
         W: the weight vector [M x 1]
         w: the bias vector [1]
-        lambda: a hyperparameter (TODO: tune this)
     
     """
     def __init__(self, M):
@@ -67,7 +66,6 @@ class MyClassifier:
         self.M = M
         self.W = np.zeros(self.M)
         self.w = 0
-        # self.lambda = 1e-1
 
         # initialize empty training set
         self.y_train = np.zeros((0, self.M))
