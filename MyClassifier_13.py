@@ -1,49 +1,15 @@
-#!/usr/bin/env python3
-
-# Notation from lecture 3: 
-#     Training data has samples i = 1,...,m
-#     x_i is data point (length n vector), s_i is label (+1 or -1)
-#     a (length n vector) is weights, b (scalar) is bias
-#     t_i are slack variables
-#
-# We solve the LP:
-#     minimize the sum of all t_i
-#     s.t. 0 <= t_i, i=1,..,m
-#          1 - s_i*((a^T)x_i + b) <= t_i
-#
-# Or with SVM:
-#    minimize the sum of all [max{0, 1 - s_i((a^T)x_i + b)} + lambda*|a|^2]
-#    Question: What is lambda? Looks like it could be a hyperparameter we choose.
-
-# Notation in Project Description (used in the code):
-#     Training data has samples i = 1,...,N
-#     y_i is data point (length M vector), s_i is label (+1 or -1)
-#     W (M by L matrix) is weights, w (length L vector) is bias (L is chosen by us)
-#     g(y) = (W^T)y + w
-#     f(x) = f(g(y)) decides classification label
-#
-# Example LP for L = 1:
-#     minimize the sum of all t_i
-#     s.t. 0 <= t_i, i=1,..,N
-#          1 - s_i*((W^T)y_i + w) <= t_i
-
-#######
-# this may be useful for svm implementation:  https://www.cvxpy.org/examples/machine_learning/svm.html
-#######
-
-### imports
 import numpy as np
 import cvxpy as cp
 import matplotlib.pyplot as plt
-
-### helper functions:
+from scipy.spatial import distance
+import random
+import requests, gzip, os, hashlib
 
 ### MyClassifier Class
 class MyClassifier:
     """Main Class for the Project
     
     Attributes:
-
         y_train: the training data vectors
         s_train: the training data labels
         y_test: the testing data vectors
@@ -98,19 +64,147 @@ class MyClassifier:
 
         return self
 
+
+    def LP(self,training_set,training_labels):
+        #First, generate the best decision hyperplane using all data samples
+        N_train = training_set.shape[0]
+        norm_dist = training_set.shape[1]
+        #Set up the LP
+        #######################################################################
+        # CHANGE THIS NUM FOR HOW MANY N SAMPLES YOU WANT LP TO USE
+        no_samp = 40
+        #######################################################################
+        y_train = training_set
+        s_train = training_labels
+
+        #Get class means
+        mn_neg1 = np.mean(y_train[s_train==-1],axis=0)
+        mn_1 = np.mean(y_train[s_train==1],axis=0)
+        center = (mn_neg1+mn_1)/2
+
+        #approx. margin estimates
+        margin_dir = mn_1-mn_neg1
+        margin_dir = margin_dir/np.linalg.norm(margin_dir)
+
+        #sample wise margin estimates
+        y_res = y_train-np.expand_dims(center,axis=0)
+
+
+        g_y = (y_res@margin_dir)*s_train
+        g_y_2 = np.diag(g_y)
+        #Representative sampling- so that chosen samples are representative of the original distributions
+        n = cp.Variable(shape=(N_train))
+        v = cp.Variable(1)
+        v2 = cp.Variable(1)
+
+        # W_new = margin_dir
+        N_train_1 = len(s_train[s_train==1])
+        N_train_neg1 = len(s_train[s_train==-1])
+        
+
+        #distance constraints
+        dist_neg1 = distance.cdist(y_train[s_train==-1],y_train[s_train==-1])/norm_dist
+        dist_neg1[dist_neg1==0] = np.amax(dist_neg1,axis=1)
+        dist_1 = distance.cdist(y_train[s_train==1],y_train[s_train==1])/norm_dist
+        dist_1[dist_1==0] = np.amax(dist_1,axis=1)
+        dist_alt_neg1 = distance.cdist(y_train[s_train==-1],y_train[s_train==1])/norm_dist
+        dist_alt_1 = distance.cdist(y_train[s_train==1],y_train[s_train==-1])/norm_dist
+
+        prob = cp.Problem(cp.Minimize(v2-v),
+            [np.ones(N_train_1)@n[s_train==1] <= int(no_samp/2),
+            np.ones(N_train_1)@n[s_train==1] >= int(no_samp/2),
+            np.ones(N_train_neg1)@n[s_train==-1] <= int(no_samp/2),
+            np.ones(N_train_neg1)@n[s_train==-1] >= int(no_samp/2),
+            g_y_2@(n) >= 0.0*np.ones(N_train),
+            np.amin(dist_neg1,axis=1)@(n[s_train==-1]) >= v,
+            np.amin(dist_1,axis=1)@(n[s_train==1]) >= v,
+            np.mean(dist_alt_neg1,axis=1)@n[s_train==-1] <= v2,
+            np.mean(dist_alt_1,axis=1)@n[s_train==1] <= v2,
+            n>=np.zeros(N_train),
+            n<=np.ones(N_train)
+            ])
+        prob.solve()
+
+        mask = n.value > 0.5
+        y_new = y_train[mask]
+        s_new = s_train[mask]
+        print('No. of chosen samples = {}'.format(sum(mask)))
+        return y_new, s_new
+
+    def ILP(self,training_set,training_labels):
+        #First, generate the best decision hyperplane using all data samples
+        N_train = training_set.shape[0]
+        norm_dist = training_set.shape[1]
+        #######################################################################
+        # CHANGE THIS NUM FOR HOW MANY N SAMPLES YOU WANT LP TO USE
+        no_samp = 40
+        #######################################################################
+        y_train = training_set
+        s_train = training_labels
+
+        #Get class means
+        mn_neg1 = np.mean(y_train[s_train==-1],axis=0)
+        mn_1 = np.mean(y_train[s_train==1],axis=0)
+        center = (mn_neg1+mn_1)/2
+
+        #approx. margin estimates
+        margin_dir = mn_1-mn_neg1
+        margin_dir = margin_dir/np.linalg.norm(margin_dir)
+
+        #sample wise margin estimates
+        y_res = y_train-np.expand_dims(center,axis=0)
+
+        g_y = (y_res@margin_dir)*s_train
+        g_y_2 = np.diag(g_y)
+        #Representative sampling- so that chosen samples are representative of the original distributions
+        n = cp.Variable(shape=(N_train),integer=True) #)#
+        v = cp.Variable(1, integer=True)
+        v2 = cp.Variable(1, integer=True)
+
+        # W_new = margin_dir
+        N_train_1 = len(s_train[s_train==1])
+        N_train_neg1 = len(s_train[s_train==-1])
+
+        #distance constraints
+        dist_neg1 = distance.cdist(y_train[s_train==-1],y_train[s_train==-1])/norm_dist
+        dist_neg1[dist_neg1==0] = np.amax(dist_neg1,axis=1)
+        dist_1 = distance.cdist(y_train[s_train==1],y_train[s_train==1])/norm_dist
+        dist_1[dist_1==0] = np.amax(dist_1,axis=1)
+        dist_alt_neg1 = distance.cdist(y_train[s_train==-1],y_train[s_train==1])/norm_dist
+        dist_alt_1 = distance.cdist(y_train[s_train==1],y_train[s_train==-1])/norm_dist
+
+        prob = cp.Problem(cp.Minimize(v2-v),
+            [np.ones(N_train_1)@n[s_train==1] <= int(no_samp/2),
+            np.ones(N_train_1)@n[s_train==1] >= int(no_samp/2),
+            np.ones(N_train_neg1)@n[s_train==-1] <= int(no_samp/2),
+            np.ones(N_train_neg1)@n[s_train==-1] >= int(no_samp/2),
+            g_y_2@(n) >= 0.0*np.ones(N_train),
+            np.amin(dist_neg1,axis=1)@(n[s_train==-1]) >= v,
+            np.amin(dist_1,axis=1)@(n[s_train==1]) >= v, 
+            np.mean(dist_alt_neg1,axis=1)@n[s_train==-1] <= v2,
+            np.mean(dist_alt_1,axis=1)@n[s_train==1] <= v2,
+            n>=np.zeros(N_train),
+            n<=np.ones(N_train)
+            ])
+        prob.solve()
+
+        mask = n.value > 0.5
+        y_new = y_train[mask]
+        s_new = s_train[mask]
+        print('No. of chosen samples = {}'.format(sum(mask)))
+        return y_new, s_new
+
+
     def train(self, train_data=None, train_label=None):
         '''
-
         Args:
             train_data: N_train x M
                         M: number of features in data vectors (784) for MNIST
                         N_train: number of points used for training
                         Each row of train_data corresponds to a data point
             train_label: vector of length N_train
-
         Returns:
             MyClassifier object
-
         '''
         if train_data is None:
             train_data = self.y_train
@@ -142,7 +236,7 @@ class MyClassifier:
             prob.solve()
             if prob.status == "infeasible":
                 self.linearly_separable = False
-                print("Data is not linearly separable")
+                # print("Data is not linearly separable")
         
         if not self.linearly_separable:
             t = cp.Variable(N_train)
@@ -152,11 +246,6 @@ class MyClassifier:
                 1 + (Y[S == -1]@W + w) <= t[S == -1]
             ])
             prob.solve()
-        
-        # print("\nThe optimal value is", prob.value)
-        # print("A solution W, w is")
-        # print("W = {}".format(W.value))
-        # print("w = {}".format(w.value))
 
         self.W = W.value
         self.w = w.value
@@ -164,20 +253,12 @@ class MyClassifier:
 
     def f(self, input):
         '''
-
         Args:
             input: vector of length L
                    corresponds to the function f(x) = f(g(y))
-
         Returns:
             estimated class
-
         '''
-
-        # if abs(input) < 1:
-        #     print("Unsure about classification. Value is {}".format(input))
-
-        # decision function in Project Description
         if input > 0:
             return 1
         elif input < 0:
@@ -187,16 +268,13 @@ class MyClassifier:
 
     def test(self, test_data):
         '''
-
         Args:
             test_data: N_test x M size matrix where
                        M: number of features
                        N_test: number of test data
-
         Returns:
             vector that contains the classification decisions
-
         '''
         N_test = test_data.shape[0]
-        return np.vectorize(self.f)(test_data@self.W + self.w*np.ones(N_test))
 
+        return np.vectorize(self.f)(test_data@self.W + self.w*np.ones(N_test))
